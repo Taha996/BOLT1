@@ -17,6 +17,10 @@ import {
   Phone,
   Mail,
   ChevronLeft,
+  MapPin,
+  Tag,
+  Building2,
+  TrendingUp,
 } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -78,69 +82,194 @@ const heroSlides = [
   },
 ];
 
-const newsItems = [
+type DetailContent = {
+  title: string;
+  category?: string;
+  date?: string;
+  location?: string;
+  img?: string;
+  excerpt: string;
+  body: string[];
+};
+
+const newsCategories = ['Tous', 'Evenements', 'Partenariats', 'International'] as const;
+
+const newsItems: DetailContent[] = [
   {
     title: 'Foire Solidaire Ramadan a Mohammedia',
-    excerpt: 'A l\'occasion de la Journee internationale des droits des femmes...',
+    category: 'Evenements',
+    date: '9 mars 2026',
+    location: 'Parc de la Ville, Mohammedia',
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2026/04/rs-foire-ramadan.jpg-scaled.jpeg',
+    excerpt: 'A l\'occasion de la Journee internationale des droits des femmes, le CMS annonce l\'inauguration officielle de la Rencontre Solidaire des Microentrepreneurs.',
+    body: [
+      'A l\'occasion de la Journee internationale des droits des femmes, le Centre Mohammed VI de Soutien a la Microfinance Solidaire (CMS) a annonce l\'inauguration officielle de la Rencontre Solidaire des Microentrepreneurs, le 8 mars 2026.',
+      'Organisee par le CMS et la Prefecture de Mohammedia, la foire se tient du 24 fevrier au 20 mars 2026 au Parc de la Ville de Mohammedia. Elle reunit 300 exposants venus de toutes les regions du Royaume, beneficiaires d\'institutions de microfinance et porteurs de projets accompagnes par les partenaires du CMS.',
+      'L\'evenement constitue une plateforme de visibilite et de mise en reseau, mettant en avant l\'impact de la microfinance a travers la creation de micro-entreprises, la promotion des produits du terroir, l\'artisanat national et le developpement economique local. La foire est ouverte tous les jours de midi a minuit.',
+      'Le choix de la date d\'inauguration, le 8 mars, souligne le role des femmes dans l\'autonomisation economique et le developpement territorial. L\'evenement a beneficie d\'une couverture mediatique de Map TV, Maroc.ma et l\'Economiste.',
+    ],
   },
   {
     title: 'Lancement du Marche Solidaire d\'Hiver a Casablanca',
-    excerpt: 'Le CMS, en partenariat avec Casa Anfa, donne rendez-vous du...',
+    category: 'Evenements',
+    date: '12 decembre 2025',
+    location: 'ANFA PARK, Casablanca',
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2026/04/Plan-de-travail-1-copie-2.png',
+    excerpt: 'Le CMS, en partenariat avec Casa Anfa, donne rendez-vous du 12 decembre 2025 au 25 janvier 2026 pour une nouvelle edition dediee a l\'artisanat marocain.',
+    body: [
+      'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire (CMS), en partenariat avec Casa Anfa, organise une nouvelle edition du Marche Solidaire d\'Hiver, du 12 decembre 2025 au 25 janvier 2026, a ANFA PARK a Casablanca.',
+      'Cette edition est dediee a la valorisation de l\'artisanat marocain et au soutien de l\'economie sociale et solidaire. Le marche accueille 560 exposants repartis sur quatre periodes tout au long de l\'evenement.',
+      'L\'initiative met l\'accent sur trois objectifs cles : valoriser le savoir-faire marocain, soutenir l\'entrepreneuriat feminin et des jeunes, et creer un espace d\'echange commercial et culturel. Les organisateurs l\'ont presentee comme une occasion d\'achats utiles, solidaires et responsables au profit des artisans, des cooperatives et des jeunes entrepreneurs marocains.',
+      'L\'evenement a beneficie d\'une couverture des principaux medias marocains, dont Map Express, Le Matin et Aujourd\'hui le Maroc.',
+    ],
   },
   {
     title: 'Participation CMS au "Women in Business"',
-    excerpt: 'Le 15 octobre 2025, le Centre Mohammed VI de Soutien...',
+    category: 'Partenariats',
+    date: '16 octobre 2025',
+    location: 'Casablanca',
+    excerpt: 'Le 15 octobre 2025, le CMS a participe a la conference "Women in Business" organisee par la BERD pour le 10e anniversaire du programme WiB.',
+    body: [
+      'Le 15 octobre 2025, le Centre Mohammed VI de Soutien a la Microfinance Solidaire (CMS) a participe a la conference "Women in Business : Briser les barrieres pour les femmes entrepreneures - un impact de 1 milliard d\'euros", organisee par la BERD a l\'occasion du 10e anniversaire du programme mondial WiB.',
+      'La conference regionale a reuni des entrepreneurs, des institutions financieres, des bailleurs de fonds, des representants gouvernementaux et des acteurs du secteur prive. Parmi les intervenants figuraient Haytham Eissa (Directeur de la BERD pour le Maroc) et Dimiter Tzantchev (Ambassadeur de l\'UE au Maroc).',
+      'Mme Amina Sakioudi, Directrice Generale du CMS, a livre une allocution d\'ouverture saluant la reconnaissance du role crucial des femmes dans le developpement economique national. Elle a souligne que les femmes - artisanes, commercantes, couturieres, agricultrices - representent le souffle discret mais puissant du progres silencieux dans les regions du Maroc.',
+      'L\'organisation a indique avoir accompagne plus de 1 200 femmes en 2025 a travers des formations, des bazars solidaires et des expositions, demontrant son engagement en faveur de l\'autonomisation economique des femmes.',
+    ],
   },
   {
-    title: 'Signature d\'une Convention de Partenariat',
-    excerpt: 'Entre Le Secretariat d\'Etat Charge de l\'Artisanat et de l\'Economie Sociale et Solidaire...',
+    title: 'Signature d\'une Convention de Partenariat SECAESS - CMS',
+    category: 'Partenariats',
+    date: '8 octobre 2025',
+    location: 'Sale',
+    excerpt: 'Le Secretariat d\'Etat Charge de l\'Artisanat et de l\'Economie Sociale et Solidaire (SECAESS) et le CMS ont signe une convention de partenariat.',
+    body: [
+      'Le Secretariat d\'Etat Charge de l\'Artisanat et de l\'Economie Sociale et Solidaire (SECAESS) et le Centre Mohammed VI de Soutien a la Microfinance Solidaire (CMS) ont signe une convention de partenariat a Sale, le 8 octobre 2025.',
+      'Ce partenariat s\'inscrit dans la volonte commune de renforcer l\'accompagnement des micro-entrepreneurs et de valoriser l\'artisanat et l\'economie sociale et solidaire au Maroc.',
+    ],
   },
   {
-    title: 'Participation du CMS a la Semaine Nationale de la Microfinance',
-    excerpt: 'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire...',
+    title: 'Participation a la Semaine Nationale de la Microfinance (SeNaMif)',
+    category: 'International',
+    date: '26 septembre 2025',
+    location: 'Benin',
+    excerpt: 'Le CMS etait present a la premiere edition de la Semaine Nationale de la Microfinance (SeNaMif).',
+    body: [
+      'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire (CMS) etait present a la premiere edition de la Semaine Nationale de la Microfinance (SeNaMif), organisee au Benin.',
+      'Cette participation temoigne de l\'ouverture du CMS sur la scene internationale et de son engagement dans le partage d\'expertise au sein du secteur de la microfinance.',
+    ],
   },
   {
     title: 'Organisation de la 5e edition du Bazar Solidaire de Casablanca',
-    excerpt: 'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire...',
+    category: 'Evenements',
+    date: '26 juillet 2025',
+    location: 'Casablanca',
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2026/04/Plan-de-travail-1-copie.png',
+    excerpt: 'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire organise une nouvelle edition du Bazar Solidaire.',
+    body: [
+      'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire organise la 5e edition du Bazar Solidaire de Casablanca.',
+      'Le Bazar Solidaire constitue un rendez-vous incontournable pour les micro-entrepreneurs beneficiaires, offrant un espace de commercialisation et de mise en valeur de leurs produits aupres du grand public.',
+    ],
   },
   {
     title: 'Organisation de la 5e edition du Bazar Solidaire de Mdiq',
-    excerpt: 'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire...',
+    category: 'Evenements',
+    date: '21 juillet 2025',
+    location: 'M\'diq',
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2026/04/Plan-de-travail-1.png',
+    excerpt: 'Le CMS organise, du 11 juillet au 31 juillet, la 5e edition du Bazar Solidaire de Mdiq.',
+    body: [
+      'Le Centre Mohammed VI de Soutien a la Microfinance Solidaire organise, du 11 juillet au 31 juillet, la 5e edition du Bazar Solidaire de Mdiq.',
+      'Cette manifestation regionale offre aux micro-entrepreneurs beneficiaires une vitrine pour promouvoir et commercialiser leurs produits, tout en renforcant le dynamisme de l\'economie locale.',
+    ],
   },
   {
     title: 'Salon Solidaire des Artistes',
-    excerpt: 'Le 23 juin, la Galerie d\'art de la Fondation CDG...',
+    category: 'Evenements',
+    date: '25 juin 2025',
+    location: 'Rabat',
+    excerpt: 'Le 23 juin, la Galerie d\'art de la Fondation CDG (Espace Expression) a accueilli l\'ouverture du Salon Solidaire des Artistes.',
+    body: [
+      'Le 23 juin, la Galerie d\'art de la Fondation CDG (Espace Expression) a accueilli l\'ouverture du Salon Solidaire des Artistes.',
+      'L\'evenement met en lumiere la dimension culturelle et artistique de l\'action solidaire du CMS, en offrant aux artistes un espace d\'exposition et de rencontre avec le public.',
+    ],
   },
 ];
 
-const activityCards = [
+const activityCards: DetailContent[] = [
   {
     title: 'Formation',
-    desc: 'Actions de formation et d\'accompagnement des agents des Associations de Micro-Credit (AMC) et des micro-entrepreneurs.',
+    excerpt: 'Actions de formation et d\'accompagnement des agents des Associations de Micro-Credit (AMC) et des micro-entrepreneurs.',
+    body: [
+      'La formation vise a developper et conceptualiser les pratiques du micro-credit et a transferer l\'expertise aux acteurs du secteur.',
+      'Les objectifs incluent le renforcement des competences operationnelles, l\'organisation d\'ateliers et de seminaires, la formation de formateurs qualifies et la realisation d\'etudes de besoins.',
+      'Le CMS propose des actions de formation et d\'accompagnement des agents des AMC et des micro-entrepreneurs beneficiaires des produits et services.',
+    ],
     img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/06/10.png',
-    href: '#',
   },
   {
     title: 'Appui a la micro-entreprise',
-    desc: 'Accompagnement des micro-entrepreneurs par le renforcement de leurs capacites techniques et manageriales.',
+    excerpt: 'Accompagnement des micro-entrepreneurs par le renforcement de leurs capacites techniques et manageriales.',
+    body: [
+      'Le CMS developpe les capacites manageriales des micro-entrepreneurs grace a une formation dediee, notamment en education financiere.',
+      'Le Centre fournit la logistique necessaire a la promotion des produits, facilite l\'acces aux reseaux de commerce solidaire et organise des foires regionales et des rencontres de commercialisation.',
+    ],
     img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/06/012.png',
-    href: '#',
   },
   {
     title: 'Observatoire',
-    desc: 'Plateforme d\'information, d\'etudes et de veille sur le secteur de la Microfinance.',
+    excerpt: 'Plateforme d\'information, d\'etudes et de veille sur le secteur de la Microfinance.',
+    body: [
+      'L\'Observatoire de la Microfinance met a disposition des ressources documentaires et assure une veille sur l\'evolution du secteur aux niveaux national et international.',
+      'Il etablit des partenariats de recherche, publie des revues specialisees et organise des evenements de promotion du secteur de la microfinance.',
+    ],
     img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/06/11.png',
-    href: '#',
   },
 ];
 
-const toolCards = [
-  { title: 'Communication et partenariats', img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/04.png', href: '#' },
-  { title: 'Education financiere pour tous', img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/03.png', href: '#' },
-  { title: 'Cartographie nationale de la microfinance', img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/geo.png', href: '#' },
-  { title: 'e-Learning Formation a distance', img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/02.png', href: '#' },
-  { title: 'Bibliotheque', img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/01.png', href: '#' },
-  { title: 'Publications', img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/0.png', href: '#' },
+const toolCards: DetailContent[] = [
+  {
+    title: 'Communication et partenariats',
+    excerpt: 'Actions de communication pour promouvoir la connaissance du secteur de la microfinance au Maroc.',
+    body: ['Le CMS mene des initiatives de communication visant a promouvoir la connaissance du secteur de la microfinance au Maroc et a renforcer ses partenariats institutionnels.'],
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/04.png',
+  },
+  {
+    title: 'Education financiere pour tous',
+    excerpt: 'Programmes d\'education financiere destines aux micro-entrepreneurs et au grand public.',
+    body: ['Les programmes d\'education financiere du CMS visent a developper les capacites de gestion des micro-entrepreneurs et a renforcer l\'inclusion financiere.'],
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/03.png',
+  },
+  {
+    title: 'Cartographie nationale de la microfinance',
+    excerpt: 'Systeme de cartographie nationale du secteur de la microfinance.',
+    body: ['La cartographie nationale offre une vue d\'ensemble geographique du secteur de la microfinance au Maroc, outil de pilotage et d\'analyse pour les acteurs du secteur.'],
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/geo.png',
+  },
+  {
+    title: 'e-Learning Formation a distance',
+    excerpt: 'Plateforme de formation a distance pour les acteurs de la microfinance.',
+    body: ['La plateforme e-Learning du CMS propose des modules de formation a distance permettant aux agents des AMC et aux micro-entrepreneurs de se former a leur rythme.'],
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/02.png',
+  },
+  {
+    title: 'Bibliotheque',
+    excerpt: 'Ressources documentaires dediees au secteur de la microfinance.',
+    body: ['La bibliotheque du CMS met a disposition une collection de ressources documentaires specialisees dans la microfinance et le developpement.'],
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/01.png',
+  },
+  {
+    title: 'Publications',
+    excerpt: 'Revues et publications specialisees du Centre.',
+    body: ['Le CMS publie des revues et des etudes specialisees rendant compte de l\'evolution du secteur de la microfinance au Maroc et a l\'international.'],
+    img: 'https://www.cm6-microfinance.ma/wp-content/uploads/2017/04/0.png',
+  },
+];
+
+const keyFigures = [
+  { value: '2007', label: 'Annee de creation du Centre', sub: 'Inaugure le 8 novembre 2007' },
+  { value: '300', label: 'Exposants', sub: 'Foire Solidaire Ramadan a Mohammedia' },
+  { value: '560', label: 'Exposants', sub: 'Marche Solidaire d\'Hiver a Casablanca' },
+  { value: '1 200+', label: 'Femmes accompagnees', sub: 'Formations, bazars et expositions en 2025' },
 ];
 
 function App() {
@@ -152,6 +281,26 @@ function App() {
   const partnerTrackRef = useRef<HTMLDivElement>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeDetail, setActiveDetail] = useState<DetailContent | null>(null);
+  const [newsFilter, setNewsFilter] = useState<(typeof newsCategories)[number]>('Tous');
+
+  const filteredNews =
+    newsFilter === 'Tous' ? newsItems : newsItems.filter((n) => n.category === newsFilter);
+
+  // Close detail modal on Escape + lock body scroll while open
+  useEffect(() => {
+    if (!activeDetail) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveDetail(null);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [activeDetail]);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -393,10 +542,10 @@ function App() {
           </div>
           <div ref={addSectionRef(1)} className="grid md:grid-cols-3 gap-8">
             {activityCards.map((card) => (
-              <a
+              <button
                 key={card.title}
-                href={card.href}
-                className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500"
+                onClick={() => setActiveDetail(card)}
+                className="group block text-left w-full bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500"
               >
                 <div className="relative h-56 overflow-hidden">
                   <img
@@ -413,9 +562,12 @@ function App() {
                   <h3 className="text-lg font-bold text-cms-charcoal mb-2 group-hover:text-cms-green transition-colors">
                     {card.title}
                   </h3>
-                  <p className="text-sm text-cms-stone leading-relaxed">{card.desc}</p>
+                  <p className="text-sm text-cms-stone leading-relaxed">{card.excerpt}</p>
+                  <span className="inline-flex items-center gap-1 mt-4 text-cms-green text-sm font-medium">
+                    En savoir plus <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
                 </div>
-              </a>
+              </button>
             ))}
           </div>
         </div>
@@ -435,10 +587,10 @@ function App() {
           </div>
           <div ref={addSectionRef(3)} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {toolCards.map((tool) => (
-              <a
+              <button
                 key={tool.title}
-                href={tool.href}
-                className="group relative block rounded-xl overflow-hidden aspect-[4/3]"
+                onClick={() => setActiveDetail(tool)}
+                className="group relative block w-full text-left rounded-xl overflow-hidden aspect-[4/3]"
               >
                 <img
                   src={tool.img}
@@ -452,7 +604,37 @@ function App() {
                     En savoir plus <ChevronRight className="w-4 h-4" />
                   </span>
                 </div>
-              </a>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Key Figures Section */}
+      <section className="py-20 lg:py-28 bg-cms-warm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div ref={addSectionRef(8)} className="text-center mb-14">
+            <span className="text-cms-gold text-sm font-semibold tracking-wider uppercase">En chiffres</span>
+            <h2 className="text-3xl md:text-4xl font-bold text-cms-charcoal mt-3 mb-4">
+              Le CMS en quelques chiffres
+            </h2>
+            <p className="text-cms-stone max-w-2xl mx-auto">
+              Un engagement concret au service des micro-entrepreneurs et de l'inclusion economique.
+            </p>
+          </div>
+          <div ref={addSectionRef(9)} className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {keyFigures.map((fig) => (
+              <div
+                key={fig.label + fig.value}
+                className="group bg-white rounded-xl p-6 lg:p-8 text-center shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500"
+              >
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-cms-green/10 flex items-center justify-center group-hover:bg-cms-green group-hover:scale-110 transition-all duration-500">
+                  <TrendingUp className="w-6 h-6 text-cms-green group-hover:text-white transition-colors" />
+                </div>
+                <div className="text-3xl lg:text-4xl font-bold text-cms-green mb-2">{fig.value}</div>
+                <div className="text-sm font-semibold text-cms-charcoal">{fig.label}</div>
+                <div className="text-xs text-cms-stone mt-2 leading-relaxed">{fig.sub}</div>
+              </div>
             ))}
           </div>
         </div>
@@ -463,31 +645,59 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-3 gap-12">
             <div ref={addSectionRef(4)} className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-6">
                 <div>
                   <span className="text-cms-gold text-sm font-semibold tracking-wider uppercase">Actualites</span>
                   <h2 className="text-3xl font-bold text-cms-charcoal mt-2">Dernieres nouvelles</h2>
                 </div>
-                <a href="#" className="hidden sm:inline-flex items-center gap-1 text-cms-green font-medium hover:text-cms-green-dark transition-colors">
-                  Voir toutes <ChevronRight className="w-4 h-4" />
-                </a>
+                <span className="hidden sm:inline-flex items-center gap-1 text-cms-stone text-sm">
+                  {filteredNews.length} article{filteredNews.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              {/* Category filter */}
+              <div className="flex flex-wrap gap-2 mb-8">
+                {newsCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setNewsFilter(cat)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 ${
+                      newsFilter === cat
+                        ? 'bg-cms-green text-white shadow-sm'
+                        : 'bg-white text-cms-stone hover:text-cms-green hover:bg-white/80'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
               <div className="space-y-4">
-                {newsItems.slice(0, 5).map((news, i) => (
-                  <a
-                    key={i}
-                    href="#"
-                    className="group flex items-start gap-4 p-4 bg-white rounded-lg hover:shadow-md transition-all duration-300"
+                {filteredNews.map((news, i) => (
+                  <button
+                    key={news.title + i}
+                    onClick={() => setActiveDetail(news)}
+                    className="group flex items-start gap-4 p-4 w-full text-left bg-white rounded-lg hover:shadow-md transition-all duration-300"
                   >
                     <div className="w-2 h-2 mt-2 rounded-full bg-cms-gold flex-shrink-0 group-hover:scale-150 transition-transform" />
-                    <div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
+                        {news.date && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-cms-stone">
+                            <Calendar className="w-3 h-3" /> {news.date}
+                          </span>
+                        )}
+                        {news.category && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cms-green">
+                            <Tag className="w-3 h-3" /> {news.category}
+                          </span>
+                        )}
+                      </div>
                       <h4 className="font-semibold text-cms-charcoal group-hover:text-cms-green transition-colors text-sm leading-snug">
                         {news.title}
                       </h4>
                       <p className="text-xs text-cms-stone mt-1 line-clamp-1">{news.excerpt}</p>
                     </div>
                     <ArrowUpRight className="w-4 h-4 text-cms-stone opacity-0 group-hover:opacity-100 flex-shrink-0 ml-auto transition-opacity" />
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
@@ -497,13 +707,13 @@ function App() {
               <p className="text-white/80 text-sm leading-relaxed mb-6">
                 Le CMS propose des actions de formation et d'accompagnement des agents des AMC et des micro-entrepreneurs beneficiaires des produits et services.
               </p>
-              <a
-                href="#"
+              <button
+                onClick={() => setActiveDetail(activityCards[0])}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
               >
                 Decouvrir nos formations
                 <ChevronRight className="w-4 h-4" />
-              </a>
+              </button>
               <div className="mt-8 pt-8 border-t border-white/20">
                 <Users className="w-10 h-10 mb-6 text-cms-gold-light" />
                 <h3 className="text-2xl font-bold mb-4">Promotion et appui</h3>
@@ -639,6 +849,83 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* Detail Modal */}
+      {activeDetail && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={activeDetail.title}
+        >
+          <div
+            className="absolute inset-0 bg-cms-charcoal/70 backdrop-blur-sm animate-modal-fade"
+            onClick={() => setActiveDetail(null)}
+          />
+          <div className="relative z-10 w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto bg-cms-warm rounded-t-2xl sm:rounded-2xl shadow-2xl animate-modal-pop">
+            {/* Close button */}
+            <button
+              onClick={() => setActiveDetail(null)}
+              className="absolute top-4 right-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 text-cms-charcoal hover:bg-white hover:text-cms-green shadow-md transition-colors"
+              aria-label="Fermer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {activeDetail.img && (
+              <div className="relative h-52 sm:h-64 overflow-hidden sm:rounded-t-2xl">
+                <img src={activeDetail.img} alt={activeDetail.title} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-cms-charcoal/70 to-transparent" />
+              </div>
+            )}
+
+            <div className="p-6 sm:p-8">
+              {/* Meta badges */}
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                {activeDetail.category && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cms-green/10 text-cms-green text-xs font-semibold">
+                    <Tag className="w-3.5 h-3.5" /> {activeDetail.category}
+                  </span>
+                )}
+                {activeDetail.date && (
+                  <span className="inline-flex items-center gap-1.5 text-cms-stone text-xs font-medium">
+                    <Calendar className="w-3.5 h-3.5" /> {activeDetail.date}
+                  </span>
+                )}
+                {activeDetail.location && (
+                  <span className="inline-flex items-center gap-1.5 text-cms-stone text-xs font-medium">
+                    <MapPin className="w-3.5 h-3.5" /> {activeDetail.location}
+                  </span>
+                )}
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-bold text-cms-charcoal leading-tight mb-5">
+                {activeDetail.title}
+              </h3>
+
+              <div className="space-y-4">
+                {activeDetail.body.map((para, i) => (
+                  <p key={i} className="text-cms-stone leading-relaxed text-sm sm:text-base">
+                    {para}
+                  </p>
+                ))}
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-stone-200 flex items-center gap-3 text-xs text-cms-stone">
+                <Building2 className="w-4 h-4 text-cms-gold flex-shrink-0" />
+                <span>Centre Mohammed VI de Soutien a la Microfinance Solidaire</span>
+              </div>
+
+              <button
+                onClick={() => setActiveDetail(null)}
+                className="mt-6 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-cms-green text-white font-medium rounded-lg hover:bg-cms-green-dark transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" /> Retour
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

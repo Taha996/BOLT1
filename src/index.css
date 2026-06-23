@@ -22,3 +22,32 @@
     text-wrap: balance;
   }
 }
+
+@keyframes cms-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cms-modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@layer utilities {
+  .animate-modal-fade {
+    animation: cms-modal-fade 0.3s ease forwards;
+  }
+  .animate-modal-pop {
+    animation: cms-modal-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
