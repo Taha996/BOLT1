@@ -24,6 +24,8 @@ import {
   Building2,
   TrendingUp,
   ChevronLeft,
+  Film,
+  ExternalLink,
 } from 'lucide-react';
 import data from './cms-data.json';
 
@@ -73,6 +75,12 @@ interface AgendaItem {
   date: string;
   paragraphs: string[];
 }
+interface VideoItem {
+  slug: string;
+  title: string;
+  src: string;
+  source: string;
+}
 
 const news = data.news as NewsItem[];
 const pages = data.pages as PageItem[];
@@ -80,6 +88,7 @@ const navigation = data.navigation as NavGroup[];
 const partners = data.partners as Partner[];
 const galleries = data.galleries as Gallery[];
 const agenda = data.agenda as AgendaItem[];
+const videos = data.videos as VideoItem[];
 const contact = data.contact as { tel: string[]; fax: string; address: string; email: string };
 
 const galleryBySlug = (s: string) => galleries.find((g) => g.slug === s);
@@ -96,6 +105,52 @@ const childHref = (slug: string) =>
     : slug === 'contact'
     ? '#/contact'
     : '#/page/' + slug;
+
+// Shorter display labels for over-long top-level nav groups so the bar stays tidy.
+const navLabelOverrides: Record<string, string> = {
+  'Promotion et appui à la commercialisation': 'Promotion & appui',
+};
+const navLabel = (label: string) => navLabelOverrides[label] || titleCase(label);
+
+// Many scraped articles carry their date, location and trailing press labels as
+// pseudo-paragraphs. Keep only the real body text.
+const NOISE_RE = /^(photos|map tv|maroc\.ma|l['’]economiste|programme fitpe|communiqu|rapport|voir toutes les actualit)/i;
+const contentParagraphs = (item: NewsItem) =>
+  item.paragraphs.filter(
+    (p) => p.trim().length > 45 && p.trim() !== item.title.trim() && !NOISE_RE.test(p.trim())
+  );
+const newsExcerpt = (item: NewsItem) => contentParagraphs(item)[0] || item.title;
+
+// Some pages aren't articles — their scraped "paragraphs" are really form fields,
+// link labels or document names. These configs render the real thing.
+interface PageLink {
+  label: string;
+  href: string;
+  primary?: boolean;
+}
+const pageExtras: Record<string, { intro?: string[]; links: PageLink[] }> = {
+  bibliotheque: {
+    links: [
+      {
+        label: 'Liste des ouvrages (PDF)',
+        href: 'https://www.cm6-microfinance.ma/wp-content/uploads/2018/03/Liste-des-ouvrages.pdf',
+        primary: true,
+      },
+    ],
+  },
+  'e-learning': {
+    intro: [
+      'Le CMS met a disposition une plateforme de formation a distance dediee aux agents des Associations de Micro-Credit et aux acteurs du secteur de la microfinance.',
+    ],
+    links: [{ label: 'Se connecter a la plateforme e-learning', href: 'https://www.cms-eformation.ma', primary: true }],
+  },
+  'education-financiere': {
+    intro: [
+      "Le programme « Education financiere pour tous » propose des modules en libre acces pour renforcer les connaissances financieres du grand public et des micro-entrepreneurs.",
+    ],
+    links: [{ label: 'Acceder a la plateforme', href: 'https://libre.cmselearning.ma', primary: true }],
+  },
+};
 
 const heroSlides = news.filter((n) => n.image).slice(0, 5);
 const homeNews = news.slice(0, 7);
@@ -127,12 +182,27 @@ const keyFigures = [
 function useHashRoute(): string[] {
   const [hash, setHash] = useState(window.location.hash);
   useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    // Only jump to the top when the user actively follows a link. Back/forward
+    // navigation (which never involves a link click) keeps its scroll position.
+    let scrollToTopNext = false;
+    const onClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement)?.closest?.('a');
+      if (link && link.getAttribute('href')?.startsWith('#')) scrollToTopNext = true;
+    };
     const onChange = () => {
       setHash(window.location.hash);
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      if (scrollToTopNext) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        scrollToTopNext = false;
+      }
     };
+    document.addEventListener('click', onClick, true);
     window.addEventListener('hashchange', onChange);
-    return () => window.removeEventListener('hashchange', onChange);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      window.removeEventListener('hashchange', onChange);
+    };
   }, []);
   return hash.replace(/^#\/?/, '').split('/').filter(Boolean);
 }
@@ -140,44 +210,48 @@ function useHashRoute(): string[] {
 /* ----------------------------- Shared chrome ---------------------------- */
 
 function NavBar({ route }: { route: string[] }) {
-  const navRef = useRef<HTMLElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const onHome = route.length === 0;
+  // "solid" = opaque cream bar with dark text. Otherwise the bar floats over the
+  // dark hero image, so text/icons must be light to stay readable.
+  const solid = scrolled || !onHome;
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [route.join('/')]);
 
   useEffect(() => {
-    const apply = () => {
-      if (!navRef.current) return;
-      const solid = window.scrollY > 40 || !onHome;
-      navRef.current.style.backgroundColor = solid ? 'rgba(250,248,245,0.97)' : 'transparent';
-      navRef.current.style.boxShadow = solid ? '0 1px 12px rgba(0,0,0,0.06)' : 'none';
-    };
-    apply();
-    window.addEventListener('scroll', apply);
-    return () => window.removeEventListener('scroll', apply);
-  }, [onHome]);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const linkClass = solid
+    ? 'text-cms-charcoal hover:text-cms-green'
+    : 'text-white hover:text-cms-gold-light [text-shadow:0_1px_4px_rgba(0,0,0,0.6)]';
 
   return (
     <nav
-      ref={navRef}
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
-      style={{ backgroundColor: onHome ? 'transparent' : 'rgba(250,248,245,0.97)' }}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        solid
+          ? 'bg-cms-warm/97 shadow-[0_1px_12px_rgba(0,0,0,0.06)]'
+          : 'bg-cms-charcoal/55 backdrop-blur-md'
+      }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          <a href="#/" className="flex items-center gap-3">
+        <div className="flex items-center justify-between h-20 gap-4">
+          <a href="#/" className="flex items-center gap-3 flex-shrink-0">
             <img
               src="https://www.cm6-microfinance.ma/wp-content/themes/cm6/img/logo.png"
               alt="CMS Logo"
               className="h-12 w-auto"
             />
           </a>
-          <div className="hidden lg:flex items-center gap-6">
-            <a href="#/" className="text-sm font-medium text-cms-charcoal hover:text-cms-green transition-colors">
+          <div className="hidden lg:flex items-center gap-4 xl:gap-6">
+            <a href="#/" className={`text-sm font-medium whitespace-nowrap transition-colors ${linkClass}`}>
               Accueil
             </a>
             {navigation.map((group) => (
@@ -189,10 +263,10 @@ function NavBar({ route }: { route: string[] }) {
               >
                 <a
                   href={group.children[0] ? childHref(group.children[0].slug) : '#/'}
-                  className="flex items-center gap-1 text-sm font-medium text-cms-charcoal hover:text-cms-green transition-colors"
+                  className={`flex items-center gap-1 text-sm font-medium whitespace-nowrap transition-colors ${linkClass}`}
                 >
-                  {titleCase(group.label)}
-                  {group.children.length > 1 && <ChevronDown className="w-3.5 h-3.5" />}
+                  {navLabel(group.label)}
+                  {group.children.length > 1 && <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />}
                 </a>
                 {group.children.length > 1 && openGroup === group.label && (
                   <div className="absolute left-0 top-full pt-3 w-64">
@@ -212,18 +286,21 @@ function NavBar({ route }: { route: string[] }) {
               </div>
             ))}
           </div>
-          <div className="hidden lg:flex items-center gap-4">
-            <button className="p-2 text-cms-charcoal hover:text-cms-green transition-colors">
+          <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
+            <button className={`p-2 transition-colors ${linkClass}`}>
               <Search className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2 text-xs font-medium text-cms-stone">
+            <div className={`flex items-center gap-2 text-xs font-medium ${solid ? 'text-cms-stone' : 'text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.6)]'}`}>
               <Globe className="w-4 h-4" />
-              <span className="text-cms-green">FR</span>
-              <span className="cursor-pointer hover:text-cms-green">EN</span>
-              <span className="cursor-pointer hover:text-cms-green">AR</span>
+              <span className={solid ? 'text-cms-green' : 'text-cms-gold-light'}>FR</span>
+              <span className="cursor-pointer hover:text-cms-gold-light">EN</span>
+              <span className="cursor-pointer hover:text-cms-gold-light">AR</span>
             </div>
           </div>
-          <button className="lg:hidden p-2 text-cms-charcoal" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button
+            className={`lg:hidden p-2 transition-colors ${solid ? 'text-cms-charcoal' : 'text-white'}`}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
@@ -235,7 +312,7 @@ function NavBar({ route }: { route: string[] }) {
             {navigation.map((group) => (
               <div key={group.label}>
                 <div className="text-xs font-bold uppercase tracking-wider text-cms-gold mb-2">
-                  {titleCase(group.label)}
+                  {navLabel(group.label)}
                 </div>
                 <div className="space-y-1.5 pl-2">
                   {group.children.map((c) => (
@@ -387,7 +464,7 @@ function HomeView() {
                 {heroSlides[currentSlide].title}
               </h1>
               <p className="text-lg text-white/80 mb-8 max-w-lg line-clamp-3">
-                {heroSlides[currentSlide].excerpt}
+                {newsExcerpt(heroSlides[currentSlide])}
               </p>
               <div className="flex items-center gap-4">
                 <a
@@ -564,7 +641,7 @@ function HomeView() {
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cms-green"><Tag className="w-3 h-3" /> {n.category}</span>
                       </div>
                       <h4 className="font-semibold text-cms-charcoal group-hover:text-cms-green transition-colors text-sm leading-snug line-clamp-2">{n.title}</h4>
-                      <p className="text-xs text-cms-stone mt-1 line-clamp-1">{n.excerpt}</p>
+                      <p className="text-xs text-cms-stone mt-1 line-clamp-1">{newsExcerpt(n)}</p>
                     </div>
                     <ArrowUpRight className="w-4 h-4 text-cms-stone opacity-0 group-hover:opacity-100 flex-shrink-0 ml-auto transition-opacity" />
                   </a>
@@ -715,7 +792,7 @@ function NewsListView() {
               <div className="p-5">
                 <span className="inline-flex items-center gap-1 text-[11px] text-cms-stone mb-2"><Calendar className="w-3 h-3" /> {n.date}</span>
                 <h3 className="font-bold text-cms-charcoal leading-snug group-hover:text-cms-green transition-colors line-clamp-3">{n.title}</h3>
-                <p className="text-xs text-cms-stone mt-2 line-clamp-2">{n.excerpt}</p>
+                <p className="text-xs text-cms-stone mt-2 line-clamp-2">{newsExcerpt(n)}</p>
                 <span className="inline-flex items-center gap-1 mt-4 text-cms-green text-sm font-medium">
                   Lire l'article <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </span>
@@ -736,6 +813,10 @@ function NewsDetailView({ slug }: { slug: string }) {
   if (!item) return <NotFound />;
   const related = news.filter((n) => n.slug !== slug && n.category === item.category).slice(0, 3);
   const galleryExtra = item.gallery.filter((g) => g !== item.image);
+  const bodyParagraphs = contentParagraphs(item);
+  const paragraphs = bodyParagraphs.length
+    ? bodyParagraphs
+    : item.paragraphs.filter((p) => p.trim() && p.trim() !== item.date.trim() && !NOISE_RE.test(p.trim()));
 
   return (
     <div className="pt-28 pb-20 min-h-screen animate-page-in">
@@ -755,7 +836,7 @@ function NewsDetailView({ slug }: { slug: string }) {
           </div>
         )}
         <div className="space-y-5">
-          {item.paragraphs.map((p, i) => (
+          {paragraphs.map((p, i) => (
             <p key={i} className="text-cms-stone leading-relaxed text-base">{p}</p>
           ))}
         </div>
@@ -804,10 +885,18 @@ function NewsDetailView({ slug }: { slug: string }) {
 function PageView({ slug }: { slug: string }) {
   // Special data-rich pages
   if (slug === 'gallery') return <GalleryIndexView />;
+  if (slug === 'gallery-video') return <VideothequeView />;
   if (slug === 'agenda') return <AgendaView />;
+  if (slug === 'recrutement') return <RecrutementView />;
+  if (slug === 'publication') return <PublicationView />;
 
   const page = pageBySlug(slug);
   if (!page) return <NotFound />;
+
+  const extras = pageExtras[slug];
+  // For link/document pages, the short label-paragraphs are not real prose.
+  const textParagraphs = extras ? page.paragraphs.filter((p) => p.trim().length > 40) : page.paragraphs;
+  const introParagraphs = textParagraphs.length ? textParagraphs : extras?.intro || [];
 
   // Partner grid page
   if (slug === 'partenaires') {
@@ -847,14 +936,33 @@ function PageView({ slug }: { slug: string }) {
           </div>
         )}
         <div className="space-y-5">
-          {page.paragraphs.length > 0 ? (
-            page.paragraphs.map((p, i) => (
+          {introParagraphs.length > 0 ? (
+            introParagraphs.map((p, i) => (
               <p key={i} className="text-cms-stone leading-relaxed text-base">{p}</p>
             ))
           ) : (
-            <p className="text-cms-stone">Contenu a venir.</p>
+            !extras && <p className="text-cms-stone">Contenu a venir.</p>
           )}
         </div>
+        {extras && (
+          <div className="flex flex-wrap gap-4 mt-8">
+            {extras.links.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors ${
+                  l.primary
+                    ? 'bg-cms-green text-white hover:bg-cms-green-dark'
+                    : 'border border-cms-green text-cms-green hover:bg-cms-green/10'
+                }`}
+              >
+                {l.label} <ExternalLink className="w-4 h-4" />
+              </a>
+            ))}
+          </div>
+        )}
         {page.images.length > 1 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-10">
             {page.images.slice(1).map((img, i) => (
@@ -902,6 +1010,188 @@ function GalleryIndexView() {
               </div>
             </a>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecrutementView() {
+  const [sent, setSent] = useState(false);
+  const formationLevels = ['Niveau bac', 'Bac+1', 'Bac+2', 'Bac+3', 'Bac+4', 'Bac+5'];
+  const fileClass =
+    'w-full text-sm text-cms-stone file:mr-4 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-cms-green/10 file:text-cms-green file:font-medium hover:file:bg-cms-green/20';
+  return (
+    <div className="pt-28 pb-20 min-h-screen animate-page-in">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumb trail={[{ label: 'Recrutement et stages' }]} />
+        <span className="text-cms-gold text-sm font-semibold tracking-wider uppercase">Carrefour communication</span>
+        <h1 className="text-4xl font-bold text-cms-charcoal mt-2 mb-4">Recrutement et stages</h1>
+        <p className="text-cms-stone mb-10 max-w-2xl">
+          Vous souhaitez rejoindre le Centre Mohammed VI de Soutien a la Microfinance Solidaire ? Deposez votre
+          candidature en remplissant le formulaire ci-dessous.
+        </p>
+
+        <div className="bg-white rounded-2xl p-8 shadow-sm">
+          {sent ? (
+            <div className="bg-cms-green/10 text-cms-green rounded-lg p-6 text-sm font-medium">
+              Merci, votre candidature a bien ete enregistree. Le CMS reviendra vers vous si votre profil correspond a
+              ses besoins.
+            </div>
+          ) : (
+            <form
+              className="space-y-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setSent(true);
+              }}
+            >
+              <div className="grid sm:grid-cols-2 gap-4">
+                <input required placeholder="Nom complet" className="px-4 py-3 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-cms-green" />
+                <input required type="email" placeholder="Email" className="px-4 py-3 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-cms-green" />
+              </div>
+              <input placeholder="Telephone" className="w-full px-4 py-3 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-cms-green" />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-cms-charcoal mb-1.5">Formation</label>
+                  <select required defaultValue="" className="w-full px-4 py-3 rounded-lg border border-stone-200 text-sm bg-white focus:outline-none focus:border-cms-green">
+                    <option value="" disabled>Niveau de formation</option>
+                    {formationLevels.map((l) => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-cms-charcoal mb-1.5">Annees d'experience</label>
+                  <select required defaultValue="" className="w-full px-4 py-3 rounded-lg border border-stone-200 text-sm bg-white focus:outline-none focus:border-cms-green">
+                    <option value="" disabled>Nombre d'annees</option>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <input placeholder="Poste souhaite (ou candidature spontanee)" className="w-full px-4 py-3 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-cms-green" />
+              <div>
+                <label className="block text-sm font-medium text-cms-charcoal mb-1.5">CV</label>
+                <input required type="file" accept=".pdf,.doc,.docx" className={fileClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-cms-charcoal mb-1.5">Lettre de motivation</label>
+                <input type="file" accept=".pdf,.doc,.docx" className={fileClass} />
+              </div>
+              <button type="submit" className="inline-flex items-center gap-2 px-6 py-3 bg-cms-green text-white font-medium rounded-lg hover:bg-cms-green-dark transition-colors">
+                Envoyer ma candidature <ChevronRight className="w-4 h-4" />
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicationView() {
+  const page = pageBySlug('publication');
+  const items = page?.paragraphs.filter((p) => p.trim()) ?? [];
+  return (
+    <div className="pt-28 pb-20 min-h-screen animate-page-in">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumb trail={[{ label: 'Publications' }]} />
+        <span className="text-cms-gold text-sm font-semibold tracking-wider uppercase">Outils de suivi</span>
+        <h1 className="text-4xl font-bold text-cms-charcoal mt-2 mb-3">Publications</h1>
+        <p className="text-cms-stone mb-10 max-w-2xl">
+          Retrouvez l'ensemble des publications du CMS : etudes, rapports, notes de tendances et tableaux de bord du
+          secteur de la microfinance au Maroc.
+        </p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {items.map((label) => (
+            <a
+              key={label}
+              href="https://www.cm6-microfinance.ma/fr/publication/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-start gap-3 bg-white rounded-xl p-5 shadow-sm hover:shadow-lg transition-all duration-300"
+            >
+              <div className="w-10 h-10 rounded-full bg-cms-green/10 flex items-center justify-center flex-shrink-0 group-hover:bg-cms-green transition-colors">
+                <FileText className="w-5 h-5 text-cms-green group-hover:text-white transition-colors" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-cms-charcoal text-sm leading-snug group-hover:text-cms-green transition-colors">{label}</h3>
+                <span className="inline-flex items-center gap-1 mt-1 text-xs text-cms-stone">
+                  Consulter <ExternalLink className="w-3 h-3" />
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VideothequeView() {
+  return (
+    <div className="pt-28 pb-20 min-h-screen animate-page-in">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumb trail={[{ label: 'Videotheque' }]} />
+        <span className="text-cms-gold text-sm font-semibold tracking-wider uppercase">Carrefour communication</span>
+        <h1 className="text-4xl font-bold text-cms-charcoal mt-2 mb-3">Videotheque</h1>
+        <p className="text-cms-stone mb-10 max-w-2xl">
+          Temoignages de micro-entrepreneurs accompagnes par le Centre Mohammed VI de Soutien a la Microfinance Solidaire.
+        </p>
+        {videos.length === 0 ? (
+          <p className="text-cms-stone">Aucune video disponible pour le moment.</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {videos.map((v) => (
+              <div key={v.slug} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+                <div className="relative bg-cms-charcoal aspect-video">
+                  <video
+                    src={v.src}
+                    controls
+                    preload="none"
+                    className="w-full h-full object-cover"
+                  >
+                    Votre navigateur ne prend pas en charge la lecture video.
+                  </video>
+                </div>
+                <div className="p-5">
+                  <h3 className="font-bold text-cms-charcoal leading-snug flex items-center gap-2">
+                    <Film className="w-4 h-4 text-cms-gold flex-shrink-0" /> {v.title}
+                  </h3>
+                  <div className="mt-4 flex items-center gap-4 text-sm">
+                    <a
+                      href={v.src}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-cms-green font-medium hover:text-cms-green-dark transition-colors"
+                    >
+                      <Film className="w-4 h-4" /> Plein ecran
+                    </a>
+                    <a
+                      href={v.source}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-cms-stone hover:text-cms-green transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" /> Voir sur le site
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-12">
+          <a
+            href="https://www.cm6-microfinance.ma/fr/gallery-video/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-cms-green font-medium hover:text-cms-green-dark transition-colors"
+          >
+            Toutes les videos sur cm6-microfinance.ma <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </div>
