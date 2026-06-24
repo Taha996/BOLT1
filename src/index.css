@@ -23,31 +23,32 @@
   }
 }
 
-@keyframes cms-modal-fade {
+@keyframes cms-page-in {
   from {
     opacity: 0;
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@keyframes cms-modal-pop {
+@keyframes cms-marquee {
   from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.97);
+    transform: translateX(0);
   }
   to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(-50%);
   }
 }
 
 @layer utilities {
-  .animate-modal-fade {
-    animation: cms-modal-fade 0.3s ease forwards;
+  .animate-page-in {
+    animation: cms-page-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-  .animate-modal-pop {
-    animation: cms-modal-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  .animate-marquee {
+    animation: cms-marquee 40s linear infinite;
+    width: max-content;
   }
 }
