@@ -43,6 +43,16 @@
   }
 }
 
+/* Slow cinematic pan/zoom for the active hero slide. */
+@keyframes cms-kenburns {
+  from {
+    transform: scale(1.04) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.16) translate3d(-1.5%, -1.5%, 0);
+  }
+}
+
 @layer utilities {
   .animate-page-in {
     animation: cms-page-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -50,5 +60,8 @@
   .animate-marquee {
     animation: cms-marquee 40s linear infinite;
     width: max-content;
+  }
+  .animate-kenburns {
+    animation: cms-kenburns 7s ease-out both;
   }
 }

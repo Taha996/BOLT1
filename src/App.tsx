@@ -152,6 +152,11 @@ const pageExtras: Record<string, { intro?: string[]; links: PageLink[] }> = {
   },
 };
 
+// WordPress serves resized thumbnails like `name-1024x682.jpeg`. Strip the size
+// suffix to load the full-resolution original (sharper) and prefer https.
+const hiRes = (url: string) =>
+  url.replace(/^http:\/\//i, 'https://').replace(/-\d+x\d+(?=\.[a-z]+$)/i, '');
+
 const heroSlides = news.filter((n) => n.image).slice(0, 5);
 const homeNews = news.slice(0, 7);
 
@@ -176,6 +181,34 @@ const keyFigures = [
   { value: String(partners.length), label: 'Partenaires', sub: 'Acteurs nationaux et internationaux' },
   { value: '1 200+', label: 'Femmes accompagnees', sub: 'Formations, bazars et expositions en 2025' },
 ];
+
+// Which top-level nav group a page belongs to (used for the side-rail of sibling links).
+const groupOfSlug = (slug: string) => navigation.find((g) => g.children.some((c) => c.slug === slug));
+
+// The team page stores its members as alternating name / role paragraphs.
+interface TeamMember {
+  name: string;
+  role: string;
+}
+const teamMembers: TeamMember[] = (() => {
+  const p = pageBySlug('qsn_equipes')?.paragraphs.filter((x) => x.trim()) ?? [];
+  const out: TeamMember[] = [];
+  for (let i = 0; i + 1 < p.length; i += 2) out.push({ name: p[i].trim(), role: p[i + 1].trim() });
+  return out;
+})();
+
+// No real portraits in the dataset — render clean branded initials avatars instead.
+// Swap these URLs for real photo paths when the team pictures are available.
+const memberInitials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+const memberAvatar = (name: string) =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=256&background=1a5f3c&color=ffffff&bold=true&font-size=0.36`;
 
 /* ------------------------------- Routing -------------------------------- */
 
@@ -445,22 +478,50 @@ function HomeView() {
   return (
     <>
       {/* Hero */}
-      <section className="relative h-screen min-h-[600px] overflow-hidden">
+      <section className="relative h-screen min-h-[620px] overflow-hidden bg-cms-charcoal">
         <div ref={heroImgRef} className="absolute inset-0">
-          {heroSlides.map((slide, i) => (
-            <div key={i} className="absolute inset-0 transition-opacity duration-1000" style={{ opacity: i === currentSlide ? 1 : 0 }}>
-              <img src={slide.image!} alt={slide.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-r from-cms-charcoal/80 via-cms-charcoal/50 to-transparent" />
-            </div>
-          ))}
+          {heroSlides.map((slide, i) => {
+            const active = i === currentSlide;
+            return (
+              <div
+                key={i}
+                className="absolute inset-0 transition-opacity duration-[1100ms] ease-out"
+                style={{ opacity: active ? 1 : 0 }}
+              >
+                {/* Blurred fill keeps the frame full even for portrait/poster visuals */}
+                <img
+                  src={hiRes(slide.image!)}
+                  alt=""
+                  aria-hidden
+                  onError={(e) => {
+                    if (e.currentTarget.src !== slide.image) e.currentTarget.src = slide.image!;
+                  }}
+                  className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-70"
+                />
+                {/* Full-bleed sharp image with a slow cinematic zoom on the active slide */}
+                <img
+                  src={hiRes(slide.image!)}
+                  alt={slide.title}
+                  onError={(e) => {
+                    if (e.currentTarget.src !== slide.image) e.currentTarget.src = slide.image!;
+                  }}
+                  className={`absolute inset-0 w-full h-full object-cover ${active ? 'animate-kenburns' : 'scale-105'}`}
+                />
+                {/* Layered gradients for depth + readable text */}
+                <div className="absolute inset-0 bg-gradient-to-r from-cms-charcoal/90 via-cms-charcoal/55 to-cms-charcoal/10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-cms-charcoal via-cms-charcoal/10 to-transparent" />
+              </div>
+            );
+          })}
         </div>
         <div className="relative z-10 h-full flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div ref={heroTextRef} className="max-w-2xl">
-              <span className="inline-block px-4 py-1.5 bg-cms-gold/90 text-white text-xs font-semibold tracking-wider uppercase rounded mb-6">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-cms-gold/90 text-white text-xs font-semibold tracking-wider uppercase rounded-full mb-6 backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 Centre Mohammed VI de Soutien a la Microfinance Solidaire
               </span>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 [text-shadow:0_2px_24px_rgba(0,0,0,0.35)]">
                 {heroSlides[currentSlide].title}
               </h1>
               <p className="text-lg text-white/80 mb-8 max-w-lg line-clamp-3">
@@ -469,14 +530,14 @@ function HomeView() {
               <div className="flex items-center gap-4">
                 <a
                   href={`#/actualites/${heroSlides[currentSlide].slug}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-cms-green text-white font-medium rounded hover:bg-cms-green-dark transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-cms-green text-white font-medium rounded-lg hover:bg-cms-green-dark transition-colors shadow-lg shadow-cms-green/30"
                 >
                   Lire l'article
                   <ChevronRight className="w-4 h-4" />
                 </a>
                 <a
                   href="#/actualites"
-                  className="inline-flex items-center px-6 py-3 border-2 border-white/40 text-white font-medium rounded hover:bg-white/10 transition-colors"
+                  className="inline-flex items-center px-6 py-3 border-2 border-white/40 text-white font-medium rounded-lg hover:bg-white/10 hover:border-white/70 transition-colors"
                 >
                   Toutes les actualites
                 </a>
@@ -484,22 +545,60 @@ function HomeView() {
             </div>
           </div>
         </div>
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-4">
-          <button onClick={prevSlide} className="p-2 text-white/70 hover:text-white transition-colors">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="flex gap-2">
-            {heroSlides.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentSlide(i)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${i === currentSlide ? 'bg-white w-8' : 'bg-white/40 hover:bg-white/70 w-2.5'}`}
+
+        {/* Glass control bar: prev/next + counter + progress + thumbnail strip */}
+        <div className="absolute inset-x-0 bottom-0 z-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-7 sm:pb-9">
+            <div className="flex items-end justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={prevSlide}
+                    aria-label="Slide precedent"
+                    className="w-10 h-10 flex items-center justify-center rounded-full border border-white/25 bg-white/5 text-white/80 hover:bg-white/15 hover:text-white backdrop-blur-sm transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={nextSlide}
+                    aria-label="Slide suivant"
+                    className="w-10 h-10 flex items-center justify-center rounded-full border border-white/25 bg-white/5 text-white/80 hover:bg-white/15 hover:text-white backdrop-blur-sm transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="text-white/90 text-sm font-medium tabular-nums">
+                  <span className="text-white text-base font-bold">{String(currentSlide + 1).padStart(2, '0')}</span>
+                  <span className="text-white/40"> / {String(heroSlides.length).padStart(2, '0')}</span>
+                </div>
+              </div>
+
+              <div className="hidden md:flex items-center gap-2.5">
+                {heroSlides.map((slide, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentSlide(i)}
+                    aria-label={`Aller au slide ${i + 1}`}
+                    className={`relative h-14 w-20 lg:w-24 rounded-lg overflow-hidden transition-all duration-300 ${
+                      i === currentSlide
+                        ? 'ring-2 ring-cms-gold ring-offset-2 ring-offset-cms-charcoal opacity-100'
+                        : 'opacity-50 hover:opacity-90'
+                    }`}
+                  >
+                    <img src={hiRes(slide.image!)} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Progress track */}
+            <div className="mt-4 h-[3px] w-full bg-white/15 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-cms-gold rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${((currentSlide + 1) / heroSlides.length) * 100}%` }}
               />
-            ))}
+            </div>
           </div>
-          <button onClick={nextSlide} className="p-2 text-white/70 hover:text-white transition-colors">
-            <ChevronRight className="w-5 h-5" />
-          </button>
         </div>
       </section>
 
@@ -819,60 +918,123 @@ function NewsDetailView({ slug }: { slug: string }) {
     : item.paragraphs.filter((p) => p.trim() && p.trim() !== item.date.trim() && !NOISE_RE.test(p.trim()));
 
   return (
-    <div className="pt-28 pb-20 min-h-screen animate-page-in">
-      <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Breadcrumb trail={[{ label: 'Actualites', href: '#/actualites' }, { label: item.category }]} />
-        <a href="#/actualites" className="inline-flex items-center gap-2 text-sm text-cms-green hover:text-cms-green-dark transition-colors mb-6">
-          <ArrowLeft className="w-4 h-4" /> Retour aux actualites
-        </a>
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cms-green/10 text-cms-green text-xs font-semibold"><Tag className="w-3.5 h-3.5" /> {item.category}</span>
-          <span className="inline-flex items-center gap-1.5 text-cms-stone text-xs font-medium"><Calendar className="w-3.5 h-3.5" /> {item.date}</span>
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-cms-charcoal leading-tight mb-8">{item.title}</h1>
-        {item.image && (
-          <div className="rounded-2xl overflow-hidden mb-8">
-            <img src={item.image} alt={item.title} className="w-full object-cover" />
-          </div>
-        )}
-        <div className="space-y-5">
-          {paragraphs.map((p, i) => (
-            <p key={i} className="text-cms-stone leading-relaxed text-base">{p}</p>
-          ))}
-        </div>
-
-        {galleryExtra.length > 0 && (
-          <div className="mt-10">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-cms-gold mb-4">Galerie</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {galleryExtra.map((g, i) => (
-                <img key={i} src={g} alt="" className="rounded-lg w-full h-32 object-cover" loading="lazy" />
-              ))}
+    <div className="min-h-screen animate-page-in bg-cms-warm">
+      {/* Immersive header — image-backed when available, green band otherwise */}
+      {item.image ? (
+        <header className="relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden bg-cms-charcoal">
+          <img src={item.image} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-cms-charcoal via-cms-charcoal/55 to-cms-charcoal/20" />
+          <div className="relative h-full flex items-end">
+            <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-12">
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cms-gold text-white text-xs font-semibold uppercase tracking-wider"><Tag className="w-3.5 h-3.5" /> {item.category}</span>
+                <span className="inline-flex items-center gap-1.5 text-white/80 text-xs font-medium"><Calendar className="w-3.5 h-3.5" /> {item.date}</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight max-w-4xl [text-shadow:0_2px_20px_rgba(0,0,0,0.4)]">
+                {item.title}
+              </h1>
             </div>
           </div>
-        )}
+        </header>
+      ) : (
+        <header className="bg-cms-green text-white pt-28 pb-14">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-wrap items-center gap-3 mb-5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cms-gold text-white text-xs font-semibold uppercase tracking-wider"><Tag className="w-3.5 h-3.5" /> {item.category}</span>
+              <span className="inline-flex items-center gap-1.5 text-white/80 text-xs font-medium"><Calendar className="w-3.5 h-3.5" /> {item.date}</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight max-w-4xl">{item.title}</h1>
+          </div>
+        </header>
+      )}
 
-        <div className="mt-10 pt-6 border-t border-stone-200 flex items-center gap-3 text-xs text-cms-stone">
-          <Building2 className="w-4 h-4 text-cms-gold flex-shrink-0" />
-          <span>Centre Mohammed VI de Soutien a la Microfinance Solidaire</span>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+        <a href="#/actualites" className="inline-flex items-center gap-2 text-sm text-cms-green hover:text-cms-green-dark transition-colors mb-8">
+          <ArrowLeft className="w-4 h-4" /> Retour aux actualites
+        </a>
+        <div className="grid lg:grid-cols-3 gap-10 lg:gap-14">
+          {/* Body */}
+          <article className="lg:col-span-2">
+            <div className="space-y-5">
+              {paragraphs.map((p, i) => (
+                <p
+                  key={i}
+                  className={
+                    i === 0
+                      ? 'text-lg text-cms-charcoal leading-relaxed first-letter:text-5xl first-letter:font-bold first-letter:text-cms-green first-letter:mr-2 first-letter:float-left first-letter:leading-[0.85]'
+                      : 'text-cms-stone leading-relaxed text-base'
+                  }
+                >
+                  {p}
+                </p>
+              ))}
+            </div>
+
+            {galleryExtra.length > 0 && (
+              <div className="mt-12">
+                <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-cms-gold mb-4">
+                  <ImageIcon className="w-4 h-4" /> Galerie
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {galleryExtra.map((g, i) => (
+                    <img key={i} src={g} alt="" className="rounded-lg w-full h-32 object-cover hover:opacity-90 transition-opacity" loading="lazy" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </article>
+
+          {/* Sticky meta rail */}
+          <aside className="lg:col-span-1">
+            <div className="lg:sticky lg:top-28 space-y-6">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cms-gold mb-4">A propos</h3>
+                <dl className="space-y-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-4 h-4 text-cms-green flex-shrink-0" />
+                    <span className="text-cms-stone">{item.date}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Tag className="w-4 h-4 text-cms-green flex-shrink-0" />
+                    <span className="text-cms-charcoal font-medium">{item.category}</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Building2 className="w-4 h-4 text-cms-green flex-shrink-0 mt-0.5" />
+                    <span className="text-cms-stone leading-snug">Centre Mohammed VI de Soutien a la Microfinance Solidaire</span>
+                  </div>
+                </dl>
+              </div>
+              <a
+                href="#/actualites"
+                className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-stone-200 text-cms-charcoal font-medium rounded-xl hover:border-cms-green hover:text-cms-green transition-colors"
+              >
+                <Newspaper className="w-4 h-4" /> Toutes les actualites
+              </a>
+            </div>
+          </aside>
         </div>
-      </article>
+      </div>
 
       {related.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
-          <h3 className="text-2xl font-bold text-cms-charcoal mb-8">Articles similaires</h3>
-          <div className="grid sm:grid-cols-3 gap-8">
-            {related.map((n) => (
-              <a key={n.slug} href={`#/actualites/${n.slug}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
-                <div className="h-40 overflow-hidden bg-cms-cream">
-                  {n.image && <img src={n.image} alt={n.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />}
-                </div>
-                <div className="p-5">
-                  <span className="text-[11px] text-cms-stone">{n.date}</span>
-                  <h4 className="font-bold text-cms-charcoal leading-snug mt-1 group-hover:text-cms-green transition-colors line-clamp-3">{n.title}</h4>
-                </div>
-              </a>
-            ))}
+        <div className="bg-cms-cream py-16 lg:py-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="w-1.5 h-7 rounded-full bg-cms-gold" />
+              <h3 className="text-2xl font-bold text-cms-charcoal">Articles similaires</h3>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-8">
+              {related.map((n) => (
+                <a key={n.slug} href={`#/actualites/${n.slug}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+                  <div className="h-40 overflow-hidden bg-cms-cream">
+                    {n.image && <img src={n.image} alt={n.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />}
+                  </div>
+                  <div className="p-5">
+                    <span className="text-[11px] text-cms-stone">{n.date}</span>
+                    <h4 className="font-bold text-cms-charcoal leading-snug mt-1 group-hover:text-cms-green transition-colors line-clamp-3">{n.title}</h4>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -889,6 +1051,7 @@ function PageView({ slug }: { slug: string }) {
   if (slug === 'agenda') return <AgendaView />;
   if (slug === 'recrutement') return <RecrutementView />;
   if (slug === 'publication') return <PublicationView />;
+  if (slug === 'qsn_equipes') return <TeamView />;
 
   const page = pageBySlug(slug);
   if (!page) return <NotFound />;
@@ -924,56 +1087,147 @@ function PageView({ slug }: { slug: string }) {
     );
   }
 
+  const group = groupOfSlug(slug);
+  const siblings = group?.children.filter((c) => c.slug !== slug) ?? [];
+  // A paragraph that ends in ":" reads as a sub-heading; the rest is body prose.
+  const isHeading = (p: string) => /[: ]\s*$/.test(p.trim()) && p.trim().length < 90;
+
   return (
-    <div className="pt-28 pb-20 min-h-screen animate-page-in">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Breadcrumb trail={[{ label: titleCase(page.title) }]} />
-        <span className="text-cms-gold text-sm font-semibold tracking-wider uppercase">Centre Mohammed VI</span>
-        <h1 className="text-4xl font-bold text-cms-charcoal mt-2 mb-8">{titleCase(page.title)}</h1>
-        {page.images[0] && (
-          <div className="rounded-2xl overflow-hidden mb-8">
-            <img src={page.images[0]} alt={page.title} className="w-full object-cover" />
-          </div>
-        )}
-        <div className="space-y-5">
-          {introParagraphs.length > 0 ? (
-            introParagraphs.map((p, i) => (
-              <p key={i} className="text-cms-stone leading-relaxed text-base">{p}</p>
-            ))
-          ) : (
-            !extras && <p className="text-cms-stone">Contenu a venir.</p>
-          )}
+    <div className="min-h-screen animate-page-in">
+      {/* Editorial header band — distinct from a plain image-on-top layout */}
+      <header className="relative bg-cms-green text-white pt-28 pb-16 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.07]">
+          <div className="absolute -top-20 -left-16 w-96 h-96 rounded-full bg-white" />
+          <div className="absolute -bottom-32 right-0 w-80 h-80 rounded-full bg-cms-gold" />
         </div>
-        {extras && (
-          <div className="flex flex-wrap gap-4 mt-8">
-            {extras.links.map((l) => (
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center flex-wrap gap-2 text-xs text-white/70 mb-6">
+            <a href="#/" className="hover:text-white transition-colors">Accueil</a>
+            {group && (
+              <span className="flex items-center gap-2">
+                <ChevronRight className="w-3 h-3" />
+                <span className="text-white/90">{navLabel(group.label)}</span>
+              </span>
+            )}
+            <span className="flex items-center gap-2">
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-white font-medium">{titleCase(page.title)}</span>
+            </span>
+          </nav>
+          <span className="inline-block text-cms-gold-light text-sm font-semibold tracking-wider uppercase">
+            {group ? navLabel(group.label) : 'Centre Mohammed VI'}
+          </span>
+          <h1 className="text-4xl md:text-5xl font-bold mt-3 max-w-3xl leading-tight">{titleCase(page.title)}</h1>
+          <div className="mt-6 w-20 h-1 rounded-full bg-cms-gold" />
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+        <div className="grid lg:grid-cols-3 gap-10 lg:gap-14">
+          {/* Main content */}
+          <article className="lg:col-span-2">
+            {page.images[0] && (
+              <div className="rounded-2xl overflow-hidden mb-10 shadow-sm">
+                <img src={page.images[0]} alt={page.title} className="w-full object-cover" />
+              </div>
+            )}
+            <div className="space-y-5">
+              {introParagraphs.length > 0 ? (
+                introParagraphs.map((p, i) =>
+                  isHeading(p) ? (
+                    <h2 key={i} className="flex items-center gap-3 text-xl font-bold text-cms-charcoal pt-6 first:pt-0">
+                      <span className="w-1.5 h-6 rounded-full bg-cms-gold flex-shrink-0" />
+                      {p.replace(/[:\s]+$/, '')}
+                    </h2>
+                  ) : (
+                    <p
+                      key={i}
+                      className={
+                        i === 0
+                          ? 'text-lg text-cms-charcoal leading-relaxed first-letter:text-5xl first-letter:font-bold first-letter:text-cms-green first-letter:mr-2 first-letter:float-left first-letter:leading-[0.85]'
+                          : 'text-cms-stone leading-relaxed text-base'
+                      }
+                    >
+                      {p}
+                    </p>
+                  )
+                )
+              ) : (
+                !extras && <p className="text-cms-stone">Contenu a venir.</p>
+              )}
+            </div>
+            {extras && (
+              <div className="flex flex-wrap gap-4 mt-10">
+                {extras.links.map((l) => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors ${
+                      l.primary
+                        ? 'bg-cms-green text-white hover:bg-cms-green-dark'
+                        : 'border border-cms-green text-cms-green hover:bg-cms-green/10'
+                    }`}
+                  >
+                    {l.label} <ExternalLink className="w-4 h-4" />
+                  </a>
+                ))}
+              </div>
+            )}
+            {page.images.length > 1 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-12">
+                {page.images.slice(1).map((img, i) => (
+                  <img key={i} src={img} alt="" className="rounded-lg w-full h-32 object-cover" loading="lazy" />
+                ))}
+              </div>
+            )}
+          </article>
+
+          {/* Sticky side rail */}
+          <aside className="lg:col-span-1">
+            <div className="lg:sticky lg:top-28 space-y-6">
+              {siblings.length > 0 && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-cms-gold mb-4">
+                    {group ? navLabel(group.label) : 'Sur le meme theme'}
+                  </h3>
+                  <ul className="space-y-1">
+                    {siblings.map((c) => (
+                      <li key={c.slug}>
+                        <a
+                          href={childHref(c.slug)}
+                          className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm text-cms-charcoal hover:bg-cms-cream hover:text-cms-green transition-colors"
+                        >
+                          <span className="line-clamp-1">{titleCase(c.title)}</span>
+                          <ChevronRight className="w-4 h-4 flex-shrink-0 text-cms-stone group-hover:text-cms-green group-hover:translate-x-0.5 transition-all" />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="bg-cms-green rounded-2xl p-6 text-white">
+                <Building2 className="w-8 h-8 mb-3 text-cms-gold-light" />
+                <h3 className="font-bold text-lg mb-2">Une question ?</h3>
+                <p className="text-white/80 text-sm leading-relaxed mb-4">
+                  Notre equipe est a votre ecoute pour toute information complementaire.
+                </p>
+                <a
+                  href="#/contact"
+                  className="inline-flex items-center gap-2 text-cms-gold-light text-sm font-medium hover:text-white transition-colors"
+                >
+                  Nous contacter <ChevronRight className="w-4 h-4" />
+                </a>
+              </div>
               <a
-                key={l.href}
-                href={l.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex items-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors ${
-                  l.primary
-                    ? 'bg-cms-green text-white hover:bg-cms-green-dark'
-                    : 'border border-cms-green text-cms-green hover:bg-cms-green/10'
-                }`}
+                href="#/"
+                className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-stone-200 text-cms-charcoal font-medium rounded-xl hover:border-cms-green hover:text-cms-green transition-colors"
               >
-                {l.label} <ExternalLink className="w-4 h-4" />
+                <ArrowLeft className="w-4 h-4" /> Retour a l'accueil
               </a>
-            ))}
-          </div>
-        )}
-        {page.images.length > 1 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-10">
-            {page.images.slice(1).map((img, i) => (
-              <img key={i} src={img} alt="" className="rounded-lg w-full h-32 object-cover" loading="lazy" />
-            ))}
-          </div>
-        )}
-        <div className="mt-12">
-          <a href="#/" className="inline-flex items-center gap-2 px-6 py-3 bg-cms-green text-white font-medium rounded-lg hover:bg-cms-green-dark transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Retour a l'accueil
-          </a>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -1085,6 +1339,109 @@ function RecrutementView() {
               </button>
             </form>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------- Team ---------------------------------- */
+
+function TeamView() {
+  const page = pageBySlug('qsn_equipes');
+  const group = groupOfSlug('qsn_equipes');
+  const [lead, ...rest] = teamMembers;
+
+  const Avatar = ({ name, className }: { name: string; className?: string }) => (
+    <div className={`relative ${className ?? ''}`}>
+      <img
+        src={memberAvatar(name)}
+        alt={name}
+        loading="lazy"
+        onError={(e) => {
+          // Fall back to a CSS initials chip if the avatar service is unreachable.
+          const el = e.currentTarget;
+          el.style.display = 'none';
+          el.nextElementSibling?.classList.remove('hidden');
+        }}
+        className="w-full h-full object-cover"
+      />
+      <div className="hidden absolute inset-0 items-center justify-center bg-cms-green text-white font-bold">
+        {memberInitials(name)}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen animate-page-in">
+      {/* Header band — matches the redesigned page layout */}
+      <header className="relative bg-cms-green text-white pt-28 pb-16 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.07]">
+          <div className="absolute -top-20 -left-16 w-96 h-96 rounded-full bg-white" />
+          <div className="absolute -bottom-32 right-0 w-80 h-80 rounded-full bg-cms-gold" />
+        </div>
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center flex-wrap gap-2 text-xs text-white/70 mb-6">
+            <a href="#/" className="hover:text-white transition-colors">Accueil</a>
+            <span className="flex items-center gap-2"><ChevronRight className="w-3 h-3" /> {group ? navLabel(group.label) : 'Qui sommes-nous'}</span>
+            <span className="flex items-center gap-2"><ChevronRight className="w-3 h-3" /> <span className="text-white font-medium">Notre equipe</span></span>
+          </nav>
+          <span className="inline-flex items-center gap-2 text-cms-gold-light text-sm font-semibold tracking-wider uppercase">
+            <Users className="w-4 h-4" /> {teamMembers.length} collaborateurs
+          </span>
+          <h1 className="text-4xl md:text-5xl font-bold mt-3 leading-tight">{titleCase(page?.title || 'Notre equipe')}</h1>
+          <p className="text-white/80 mt-4 max-w-2xl">
+            Une equipe pluridisciplinaire engagee au service du developpement de la microfinance solidaire au Maroc.
+          </p>
+          <div className="mt-6 w-20 h-1 rounded-full bg-cms-gold" />
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+        {/* Featured leadership card */}
+        {lead && (
+          <div className="mb-14 bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden flex flex-col sm:flex-row">
+            <div className="sm:w-64 h-64 sm:h-auto flex-shrink-0 bg-cms-cream">
+              <Avatar name={lead.name} className="w-full h-full flex" />
+            </div>
+            <div className="p-8 sm:p-10 flex flex-col justify-center">
+              <span className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full bg-cms-gold/10 text-cms-gold text-xs font-semibold uppercase tracking-wider mb-4">
+                Direction
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-cms-charcoal">{lead.name}</h2>
+              <p className="text-cms-green font-medium mt-2">{lead.role}</p>
+              <p className="text-cms-stone text-sm leading-relaxed mt-4 max-w-md">
+                A la tete du Centre Mohammed VI de Soutien a la Microfinance Solidaire, elle coordonne l'ensemble des
+                poles et veille a la mise en oeuvre de la strategie de l'institution.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Team grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          {rest.map((m) => (
+            <div
+              key={m.name}
+              className="group bg-white rounded-2xl p-6 text-center shadow-sm border border-stone-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-500"
+            >
+              <div className="relative mx-auto mb-5 w-24 h-24">
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-cms-gold/40 to-cms-green/40 opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-500" />
+                <Avatar name={m.name} className="relative w-24 h-24 rounded-full overflow-hidden ring-2 ring-stone-100 group-hover:ring-cms-gold/60 transition-all flex" />
+              </div>
+              <h3 className="font-bold text-cms-charcoal leading-snug group-hover:text-cms-green transition-colors">{m.name}</h3>
+              <p className="text-xs text-cms-stone mt-1.5 leading-relaxed">{m.role}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-16">
+          <a
+            href="#/contact"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-cms-green text-white font-medium rounded-lg hover:bg-cms-green-dark transition-colors"
+          >
+            Contacter le Centre <ChevronRight className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </div>
